@@ -1,0 +1,17 @@
+{
+    "env": {
+        "myDefaultIncludePath": [
+            "${workspaceFolder}",
+            "${workspaceFolder}/include"
+        ]
+    },
+    "configurations": [
+        {
+            "name": "C++ SDL app",
+            "includePath": [
+                "${myDefaultIncludePath}"
+            ]
+        }
+    ],
+    "version": 4
+}
