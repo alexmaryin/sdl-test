@@ -2,11 +2,12 @@
 #include <SDL2/SDL.h>
 #include <experimental/random>
 #include "include/circle.hpp"
+#include <vector>
 
 const int WIDTH = 1360, HEIGHT = 760;
 const int H_WIDTH = WIDTH / 2;
 const int H_HEIGHT = HEIGHT / 2;
-const int STARS_COUNT = 500;
+const int STARS_COUNT = 200;
 float speed = 0.1;
 float radius_delta = 0.001;
 Uint32 fps_lasttime = SDL_GetTicks();
@@ -15,53 +16,53 @@ Uint32 fps_frames = 0;
 struct Star
 {
     float x, y, z, radius, brightness, viewX, viewY;
+
+    Star()
+    {
+        newStar();
+    }
+
+    void newStar()
+    {
+        x = viewX = std::experimental::randint(0, WIDTH) - H_WIDTH;
+        y = viewY = std::experimental::randint(0, HEIGHT) - H_HEIGHT;
+        z = 256;
+        brightness = 0.0;
+        radius = 1.0;
+    }
+
+    bool isOffScreen()
+    {
+        return z <= 0 || viewX <= -H_WIDTH || viewY <= -H_HEIGHT || viewX >= H_WIDTH || viewY >= H_HEIGHT;
+    }
+
+    void processStar()
+    {
+        viewX = std::round(x * 256 / z);
+        viewY = std::round(y * 256 / z);
+        z -= speed;
+        radius += radius_delta;
+        if (isOffScreen())
+        {
+            newStar();
+        }
+        if (brightness < 256)
+        {
+            brightness += 0.15;
+        }
+    }
 };
-
-Star newStar()
-{
-    Star star;
-    star.x = star.viewX = std::experimental::randint(0, WIDTH) - H_WIDTH;
-    star.y = star.viewY = std::experimental::randint(0, HEIGHT) - H_HEIGHT;
-    star.z = 256;
-    star.brightness = 0.0;
-    star.radius = 1.0;
-
-    return star;
-}
-
-bool isOffScreen(int x, int y, int z)
-{
-    return z <= 0 || x <= -H_WIDTH || y <= -H_HEIGHT || x >= H_WIDTH || y >= H_HEIGHT;
-}
 
 void setFPStitle(SDL_Window *window)
 {
     fps_frames++;
     if (fps_lasttime < SDL_GetTicks() - 1000)
     {
-        fps_lasttime = SDL_GetTicks();      
+        fps_lasttime = SDL_GetTicks();
         auto title = "C++ SDL window: " + std::to_string(fps_frames) + " FPS";
         fps_frames = 0;
         SDL_SetWindowTitle(window, title.c_str());
     }
-}
-
-Star processStar(Star star)
-{
-    Star s = star;
-    s.viewX = std::round(s.x * 256 / s.z);
-    s.viewY = std::round(s.y * 256 / s.z);
-    s.z -= speed;
-    s.radius += radius_delta;
-    if (isOffScreen(s.viewX, s.viewY, s.z))
-    {
-        s = newStar();
-    }
-    if (s.brightness < 256)
-    {
-        s.brightness += 0.15;
-    }
-    return s;
 }
 
 int main(int argc, char *argv[])
@@ -86,11 +87,7 @@ int main(int argc, char *argv[])
 
     SDL_Event windowEvent;
 
-    Star stars[STARS_COUNT];
-    for (int i = 0; i < STARS_COUNT; i++)
-    {
-        stars[i] = newStar();
-    }
+    std::vector<Star> stars(STARS_COUNT, Star());
 
     while (true)
     {
@@ -105,14 +102,15 @@ int main(int argc, char *argv[])
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
+        
         for (int i = 0; i < STARS_COUNT; i++)
         {
-            Star star = processStar(stars[i]);
-            SDL_SetRenderDrawColor(renderer, stars[i].brightness, stars[i].brightness, stars[i].brightness, 255);
-            int x = star.viewX + H_WIDTH;
-            int y = star.viewY + H_HEIGHT;
-            SDL_RenderFillCircle(renderer, x, y, std::round(stars[i].radius));
-            stars[i] = star;
+            Star *star = &stars[i];
+            star->processStar();
+            SDL_SetRenderDrawColor(renderer, star->brightness, star->brightness, star->brightness, 255);
+            int x = star->viewX + H_WIDTH;
+            int y = star->viewY + H_HEIGHT;
+            SDL_RenderFillCircle(renderer, x, y, std::round(star->radius));
         }
         SDL_RenderPresent(renderer);
     }
